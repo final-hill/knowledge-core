@@ -1,0 +1,43 @@
+/*!
+ * @license
+ * Copyright (C) 2023 Michael L Haufe
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
+ */
+
+import assert from 'node:assert/strict';
+import { describe, test } from 'node:test';
+import { or, and, eq, run } from '../kanren.mts.disabled';
+
+/* eslint-disable require-jsdoc */
+
+describe('kanren', () => {
+    test('simple equality', () => {
+        const x = Symbol('x'),
+            result = run([x], eq(x, 5));
+        assert.strictEqual(result.length, 1);
+        assert.strictEqual(result[0][x], 5);
+    });
+
+    function parent(x: any, y: any) {
+        return or(
+            and(eq(x, 'amy'), eq(y, 'bob')),
+            and(eq(x, 'bob'), eq(y, 'marco')),
+            and(eq(x, 'bob'), eq(y, 'mike'))
+        );
+    }
+
+    function grandparent(x: any, z: any) {
+        const y = Symbol('y');
+
+        return and(parent(x, y), parent(y, z));
+    }
+
+    test('parent', () => {
+        const x = Symbol('x'),
+            findAmy = run([x], grandparent(x, 'mike'));
+
+        assert.strictEqual(findAmy.length, 1);
+        // assert.strictEqual(findAmy[0][x], 'amy');
+    });
+});

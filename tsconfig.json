@@ -10,8 +10,8 @@
         "allowSyntheticDefaultImports": true,
         "outDir": "dist",
         "lib": [
-            "ES2022",
-            "DOM"
+            "DOM",
+            "ES2022"
         ]
     },
     "include": [

@@ -5,4 +5,6 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-self.console.log('Helo World!');
+import 'core-js/full/iterator';
+
+export { eq, or, and, run } from './kanren.mts.disabled';

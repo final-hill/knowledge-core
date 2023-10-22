@@ -1,0 +1,136 @@
+/*!
+ * @license
+ * Copyright (C) 2023 Michael L Haufe
+ * SPDX-License-Identifier: AGPL-3.0-only
+ * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
+ */
+
+/* eslint-disable require-jsdoc */
+
+
+type Goal = (state: State) => Generator<State>;
+
+class State {
+    static EMPTY = new State();
+    #map: Map<symbol, any>;
+
+    constructor(entries?: Iterable<readonly [symbol, any]>) {
+        this.#map = new Map(entries);
+    }
+
+    [Symbol.iterator](): IterableIterator<[symbol, any]> {
+        return this.#map[Symbol.iterator]();
+    }
+
+    get(key: symbol): any {
+        return this.#map.get(key);
+    }
+
+    set(key: symbol, value: any): State {
+        return new State(new Map(this.#map).set(key, value));
+    }
+
+    walk(key: symbol | any): any {
+        if (typeof key !== 'symbol') return key;
+        const val = this.get(key);
+
+        return val === undefined ? key : this.walk(val);
+    }
+
+    unify(x: symbol | any, y: symbol | any): State {
+        const [l, r] = [this.walk(x), this.walk(y)];
+
+        return l === r ? this :
+            typeof l === 'symbol' ? this.set(l, r) :
+                typeof r === 'symbol' ? this.set(r, l) :
+                    State.EMPTY;
+    }
+}
+
+export const eq = (left: any, right: any): Goal => function* (state: State) {
+    yield state.unify(left, right);
+};
+
+const conj = (a: Goal, b: Goal): Goal => function* (state: State) {
+    yield* a(state).map(s => b(s)).filter(s => s !== State.EMPTY);
+
+},
+
+    disj = (a: Goal, b: Goal): Goal => function* (state: State) {
+        yield* a(state);
+        yield* b(state);
+    };
+
+
+export const or = (...goals: Goal[]): Goal => (state: State) => { };
+
+
+// function* (state: State) {
+
+// function* doOr(offset: number, state: State): Generator<State> {
+//     const goalGen: Generator<State> = goals[offset](state);
+
+//     while (true) {
+//         const result = goalGen.next(),
+//             newState = result.value;
+//         if (result.done) break;
+//         if (newState) yield newState;
+//     }
+
+//     yield* doOr(offset + 1, state);
+// }
+
+// yield* doOr(0, state);
+// };
+
+export const and = (...goals: Goal[]): Goal => function* (state: State) {
+    // yield* goals.reduce((acc, g) => {
+    //     const gen = g(state);
+
+    //     return acc.map(s => gen.next().value.unify(s, state)).filter(s => s !== State.EMPTY);
+    // }, [state]);
+
+    // function* doAnd(offset: number, state: State): Generator<State> {
+    //     const goalGen = goals[offset](state);
+    //     while (true) {
+    //         const result = goalGen.next();
+    //         if (result.done) break;
+    //         const newState = result.value;
+    //         if (newState)
+    //             if (offset === goals.length - 1)
+    //                 yield newState;
+    //             else
+    //                 yield* doAnd(offset + 1, newState);
+    //         else
+    //             yield State.EMPTY;
+    //     }
+    // }
+
+    // yield* doAnd(0, state);
+};
+
+export const run = (vars: symbol[], goal: Goal, limit = Number.POSITIVE_INFINITY) =>
+    [...goal(State.EMPTY)].map(s => {
+        const r = Object.create(null);
+        vars.forEach(v => r[v] = s.walk(v));
+
+        return r;
+    }).slice(0, limit);
+
+// const results = [],
+//     state = State.EMPTY,
+//     gen = goal(state);
+
+// while (limit > 0) {
+//     const res = gen.next(),
+//         newState: State = res.value;
+//     if (res.done) break;
+//     if (newState) {
+//         limit--;
+//         const r = Object.create(null);
+//         vars.forEach(v => r[v] = newState.walk(v));
+//         results.push(r);
+//     }
+// }
+
+// return results;

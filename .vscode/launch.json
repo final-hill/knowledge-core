@@ -1,0 +1,23 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug Test File: foo.test.mts",
+            "type": "node",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/foo.test.mts",
+            "args": [
+                "--no-warnings",
+                "--import",
+                "tsx"
+            ],
+            "cwd": "${workspaceFolder}",
+            "stopOnEntry": true,
+            "disableOptimisticCompilation": true,
+            "runtimeArgs": [
+                "--no-lazy-eval"
+            ],
+            "sourceMaps": true
+        }
+    ]
+}
