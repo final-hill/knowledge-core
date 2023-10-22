@@ -1,13 +1,15 @@
 /*!
  * @license
- * Copyright (C) 2023 Michael L Haufe
+ * Copyright (C) 2023 Final Hill LLC
  * SPDX-License-Identifier: AGPL-3.0-only
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
 /* eslint-disable require-jsdoc */
 
-const zip = <T, U>(t: T[], u: U[]): [T, U][] => t.map((v, i) => [v, u[i]]);
+// Reference: https://dodisturb.me/posts/2018-12-25-The-Essence-of-Datalog.html
+
+import { zip } from './lib/zip.mjs';
 
 class Equatable {
     equals(other: any): boolean {
@@ -67,10 +69,35 @@ const emptySubstitution: Substitution = [],
     },
     unify = ({ predSym, terms }: Atom, { predSym: predSym2, terms: terms2 }: Atom): Substitution | undefined =>
         predSym !== predSym2 ? undefined : unifyTerms(zip(terms, terms2)),
-    evalAtom = (kb: KnowledgeBase, atom: Atom, subs: Substitution[]): boolean => {
-        const downToEarthAtom = substitute(atom, unknown),
-            extension = kb.map(kbAtom => unify);
-    },
-    walk = (kb: KnowledgeBase, atom: Atom): unknown => void 0,
+    evalAtom = (kb: KnowledgeBase, atom: Atom, substitutions: Substitution[]): Substitution[] =>
+        substitutions.flatMap<Substitution>(substitution => {
+            const downToEarthAtom = substitute(atom, substitution),
+                extensions = kb.flatMap(kbAtom => unify(downToEarthAtom, kbAtom))
+                    .filter(Boolean) as unknown as Substitution[];
+
+            return extensions.map(extension => [...substitution, ...extension]);
+        }),
+    walk = (kb: KnowledgeBase, atoms: Atom[]): Substitution[] =>
+        atoms.reduceRight((subs, atom) => evalAtom(kb, atom, subs), [emptySubstitution]),
     evalRule = (kb: KnowledgeBase, { head, body }: Rule): KnowledgeBase =>
-        substitute();
+        walk(kb, body).map(sub => substitute(head, sub)),
+    immediateConsequence = (rules: Program, kb: KnowledgeBase): KnowledgeBase =>
+        [...new Set([...kb, ...rules.flatMap(rule => evalRule(kb, rule))])],
+    solve = (rules: Program): KnowledgeBase => {
+        const step = (f: (kb: KnowledgeBase) => KnowledgeBase, currentKB: KnowledgeBase): KnowledgeBase => {
+            const nextKB = immediateConsequence(rules, currentKB);
+
+            return nextKB === currentKB ? currentKB : f(nextKB);
+        };
+
+        if (rules.every(isRangeRestricted))
+            return fix(step, [] as KnowledgeBase);
+        else
+            throw new Error('The input program is not range-restricted.');
+    },
+    isRangeRestricted = ({ head, body }: Rule): boolean => {
+        const vars = (atom: Atom): Var[] => [...new Set(atom.terms.filter(term => term instanceof Var) as Var[])],
+            isSubsetOf = (as: Var[], bs: Var[]): boolean => as.every(a => bs.includes(a));
+
+        return isSubsetOf(vars(head), body.flatMap(vars));
+    };

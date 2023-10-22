@@ -5,4 +5,4 @@
  * @see <https://spdx.org/licenses/AGPL-3.0-only.html>
  */
 
-import 'core-js/full/iterator';
+export const zip = <T, U>(t: T[], u: U[]): [T, U][] => t.map((v, i) => [v, u[i]]);
